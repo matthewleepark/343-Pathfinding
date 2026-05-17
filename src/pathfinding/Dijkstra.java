@@ -7,10 +7,6 @@ import java.util.PriorityQueue;
 
 public class Dijkstra {
 
-    /**
-     * Run Dijkstra on the grid from start to end.
-     * The grid must be reset before calling this.
-     */
     public static PathResult search(Grid grid, Node start, Node end) {
         int nodesVisited = 0;
         long startTime = System.nanoTime();

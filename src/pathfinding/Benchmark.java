@@ -1,9 +1,5 @@
 package pathfinding;
 
-/**
- * Runs both algorithms across a range of grid sizes and wall densities,
- * printing CSV data suitable for plotting.
- */
 public class Benchmark {
 
     // Grid sizes to test (N x N)
