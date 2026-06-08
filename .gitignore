@@ -1,2 +1,5 @@
 out/
 *.class
+.claude/
+final_essay.html
+draft_essay.html
