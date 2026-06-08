@@ -21,10 +21,11 @@ public class Grid {
         return nodes[row][col];
     }
 
-    /** Returns 4-directional neighbors that are not walls. */
-    public List<Node> neighbors(Node n) {
+    public List<Node> neighbors(Node n, boolean diagonal) {
         List<Node> result = new ArrayList<>();
-        int[][] dirs = {{-1,0},{1,0},{0,-1},{0,1}};
+        int[][] dirs = diagonal
+            ? new int[][]{{-1,0},{1,0},{0,-1},{0,1},{-1,-1},{-1,1},{1,-1},{1,1}}
+            : new int[][]{{-1,0},{1,0},{0,-1},{0,1}};
         for (int[] d : dirs) {
             int r = n.row + d[0], c = n.col + d[1];
             if (r >= 0 && r < rows && c >= 0 && c < cols && !nodes[r][c].isWall)
@@ -33,17 +34,12 @@ public class Grid {
         return result;
     }
 
-    /** Reset all node pathfinding state without changing walls. */
     public void reset() {
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
                 nodes[r][c].reset();
     }
 
-    /**
-     * Randomly place walls with the given density (0.0–1.0).
-     * Start and end cells are never walls.
-     */
     public void randomizeWalls(double density, Node start, Node end, long seed) {
         Random rng = new Random(seed);
         for (int r = 0; r < rows; r++) {
@@ -55,7 +51,36 @@ public class Grid {
         }
     }
 
-    /** Clear all walls. */
+    public void generateMaze(Node start, Node end, long seed) {
+        Random rng = new Random(seed);
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+                nodes[r][c].isWall = true;
+
+        carve(start.row, start.col, rng);
+        nodes[end.row][end.col].isWall = false;
+    }
+
+    private void carve(int r, int c, Random rng) {
+        nodes[r][c].isWall = false;
+        int[][] dirs = {{0,2},{0,-2},{2,0},{-2,0}};
+        shuffleDirs(dirs, rng);
+        for (int[] d : dirs) {
+            int nr = r + d[0], nc = c + d[1];
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && nodes[nr][nc].isWall) {
+                nodes[r + d[0]/2][c + d[1]/2].isWall = false;
+                carve(nr, nc, rng);
+            }
+        }
+    }
+
+    private void shuffleDirs(int[][] dirs, Random rng) {
+        for (int i = dirs.length - 1; i > 0; i--) {
+            int j = rng.nextInt(i + 1);
+            int[] tmp = dirs[i]; dirs[i] = dirs[j]; dirs[j] = tmp;
+        }
+    }
+
     public void clearWalls() {
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)

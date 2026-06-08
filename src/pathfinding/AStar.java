@@ -7,13 +7,16 @@ import java.util.PriorityQueue;
 
 public class AStar {
 
-    public static PathResult search(Grid grid, Node start, Node end) {
+    public enum Heuristic { MANHATTAN, EUCLIDEAN }
+
+    public static PathResult search(Grid grid, Node start, Node end,
+                                    Heuristic heuristic, boolean diagonal) {
         int nodesVisited = 0;
         long startTime = System.nanoTime();
 
-        PriorityQueue<Node> open = new PriorityQueue<>(); // sorted by fCost
+        PriorityQueue<Node> open = new PriorityQueue<>();
         start.gCost = 0;
-        start.fCost = heuristic(start, end);
+        start.fCost = h(start, end, heuristic);
         open.add(start);
 
         while (!open.isEmpty()) {
@@ -25,12 +28,14 @@ public class AStar {
 
             if (current == end) break;
 
-            for (Node neighbor : grid.neighbors(current)) {
+            for (Node neighbor : grid.neighbors(current, diagonal)) {
                 if (neighbor.visited) continue;
-                double newG = current.gCost + 1; // uniform edge weight of 1
+                boolean isDiag = (neighbor.row != current.row && neighbor.col != current.col);
+                double edgeCost = isDiag ? Math.sqrt(2) : 1.0;
+                double newG = current.gCost + edgeCost;
                 if (newG < neighbor.gCost) {
                     neighbor.gCost = newG;
-                    neighbor.fCost = newG + heuristic(neighbor, end);
+                    neighbor.fCost = newG + h(neighbor, end, heuristic);
                     neighbor.parent = current;
                     open.add(neighbor);
                 }
@@ -41,9 +46,13 @@ public class AStar {
         return new PathResult(reconstructPath(end), nodesVisited, elapsed);
     }
 
-    /** Manhattan distance — admissible for 4-directional grids with unit cost. */
-    private static double heuristic(Node a, Node b) {
-        return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
+    private static double h(Node a, Node b, Heuristic heuristic) {
+        int dr = Math.abs(a.row - b.row);
+        int dc = Math.abs(a.col - b.col);
+        if (heuristic == Heuristic.EUCLIDEAN) {
+            return Math.sqrt(dr * dr + dc * dc);
+        }
+        return dr + dc; // Manhattan
     }
 
     private static List<Node> reconstructPath(Node end) {

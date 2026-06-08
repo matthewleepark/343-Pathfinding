@@ -7,11 +7,10 @@ import java.util.PriorityQueue;
 
 public class Dijkstra {
 
-    public static PathResult search(Grid grid, Node start, Node end) {
+    public static PathResult search(Grid grid, Node start, Node end, boolean diagonal) {
         int nodesVisited = 0;
         long startTime = System.nanoTime();
 
-        // fCost is unused by Dijkstra; we use gCost as the priority key
         PriorityQueue<Node> open = new PriorityQueue<>((a, b) -> Double.compare(a.gCost, b.gCost));
         start.gCost = 0;
         open.add(start);
@@ -25,9 +24,11 @@ public class Dijkstra {
 
             if (current == end) break;
 
-            for (Node neighbor : grid.neighbors(current)) {
+            for (Node neighbor : grid.neighbors(current, diagonal)) {
                 if (neighbor.visited) continue;
-                double newG = current.gCost + 1; // uniform edge weight of 1
+                boolean isDiag = (neighbor.row != current.row && neighbor.col != current.col);
+                double edgeCost = isDiag ? Math.sqrt(2) : 1.0;
+                double newG = current.gCost + edgeCost;
                 if (newG < neighbor.gCost) {
                     neighbor.gCost = newG;
                     neighbor.parent = current;

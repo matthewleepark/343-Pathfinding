@@ -2,88 +2,113 @@ package pathfinding;
 
 public class Benchmark {
 
-    // Grid sizes to test (N x N)
-    private static final int[] SIZES = {10, 20, 30, 50, 75, 100, 150, 200};
-
-    // Wall densities to test
+    private static final int[] SIZES   = {10, 20, 30, 50, 75, 100, 150, 200};
     private static final double[] DENSITIES = {0.0, 0.15, 0.30};
-
-    // Number of random seeds averaged per configuration
     private static final int TRIALS = 10;
 
     public static void run() {
-        System.out.println("=== BENCHMARK: Nodes Visited ===");
-        System.out.println("Size,Density,Dijkstra_Nodes,AStar_Nodes");
 
+
+        System.out.println("=== 4-DIR | MANHATTAN | RANDOM WALLS: Nodes Visited ===");
+        System.out.println("Size,Density,Dijkstra,AStar_Manhattan");
         for (double density : DENSITIES) {
             for (int size : SIZES) {
-                long dijkstraNodes = 0, astarNodes = 0;
-                int validTrials = 0;
-
+                long dNodes = 0, aNodes = 0;
+                int valid = 0;
                 for (int seed = 0; seed < TRIALS; seed++) {
-                    Grid grid = new Grid(size, size);
-                    Node start = grid.get(0, 0);
-                    Node end   = grid.get(size - 1, size - 1);
-                    grid.randomizeWalls(density, start, end, seed);
-
-                    grid.reset();
-                    PathResult dResult = Dijkstra.search(grid, start, end);
-
-                    grid.reset();
-                    PathResult aResult = AStar.search(grid, start, end);
-
-                    // Only count trials where a path exists
-                    if (dResult.foundPath() && aResult.foundPath()) {
-                        dijkstraNodes += dResult.nodesVisited;
-                        astarNodes    += aResult.nodesVisited;
-                        validTrials++;
-                    }
+                    Grid g = makeRandom(size, density, seed);
+                    Node s = g.get(0,0), e = g.get(size-1,size-1);
+                    g.reset(); PathResult dr = Dijkstra.search(g, s, e, false);
+                    g.reset(); PathResult ar = AStar.search(g, s, e, AStar.Heuristic.MANHATTAN, false);
+                    if (dr.foundPath() && ar.foundPath()) { dNodes+=dr.nodesVisited; aNodes+=ar.nodesVisited; valid++; }
                 }
-
-                if (validTrials > 0) {
-                    System.out.printf("%d,%.2f,%d,%d%n",
-                            size, density,
-                            dijkstraNodes / validTrials,
-                            astarNodes    / validTrials);
-                }
+                if (valid > 0) System.out.printf("%d,%.2f,%d,%d%n", size, density, dNodes/valid, aNodes/valid);
             }
         }
 
-        System.out.println();
-        System.out.println("=== BENCHMARK: Execution Time (ms) ===");
-        System.out.println("Size,Density,Dijkstra_ms,AStar_ms");
 
+        System.out.println("\n=== 4-DIR | EUCLIDEAN | RANDOM WALLS: Nodes Visited ===");
+        System.out.println("Size,Density,Dijkstra,AStar_Euclidean");
         for (double density : DENSITIES) {
             for (int size : SIZES) {
-                long dijkstraTime = 0, astarTime = 0;
-                int validTrials = 0;
-
+                long dNodes = 0, aNodes = 0;
+                int valid = 0;
                 for (int seed = 0; seed < TRIALS; seed++) {
-                    Grid grid = new Grid(size, size);
-                    Node start = grid.get(0, 0);
-                    Node end   = grid.get(size - 1, size - 1);
-                    grid.randomizeWalls(density, start, end, seed);
-
-                    grid.reset();
-                    PathResult dResult = Dijkstra.search(grid, start, end);
-
-                    grid.reset();
-                    PathResult aResult = AStar.search(grid, start, end);
-
-                    if (dResult.foundPath() && aResult.foundPath()) {
-                        dijkstraTime += dResult.timeNanos;
-                        astarTime    += aResult.timeNanos;
-                        validTrials++;
-                    }
+                    Grid g = makeRandom(size, density, seed);
+                    Node s = g.get(0,0), e = g.get(size-1,size-1);
+                    g.reset(); PathResult dr = Dijkstra.search(g, s, e, false);
+                    g.reset(); PathResult ar = AStar.search(g, s, e, AStar.Heuristic.EUCLIDEAN, false);
+                    if (dr.foundPath() && ar.foundPath()) { dNodes+=dr.nodesVisited; aNodes+=ar.nodesVisited; valid++; }
                 }
-
-                if (validTrials > 0) {
-                    System.out.printf("%d,%.2f,%.4f,%.4f%n",
-                            size, density,
-                            (dijkstraTime / validTrials) / 1_000_000.0,
-                            (astarTime    / validTrials) / 1_000_000.0);
-                }
+                if (valid > 0) System.out.printf("%d,%.2f,%d,%d%n", size, density, dNodes/valid, aNodes/valid);
             }
         }
+
+
+        System.out.println("\n=== 8-DIR DIAGONAL | 0% WALLS: Nodes Visited ===");
+        System.out.println("Size,Dijkstra,AStar_Manhattan,AStar_Euclidean");
+        for (int size : SIZES) {
+            long dNodes = 0, amNodes = 0, aeNodes = 0;
+            int valid = 0;
+            for (int seed = 0; seed < TRIALS; seed++) {
+                Grid g = makeRandom(size, 0.0, seed);
+                Node s = g.get(0,0), e = g.get(size-1,size-1);
+                g.reset(); PathResult dr  = Dijkstra.search(g, s, e, true);
+                g.reset(); PathResult amr = AStar.search(g, s, e, AStar.Heuristic.MANHATTAN, true);
+                g.reset(); PathResult aer = AStar.search(g, s, e, AStar.Heuristic.EUCLIDEAN, true);
+                if (dr.foundPath() && amr.foundPath() && aer.foundPath()) {
+                    dNodes+=dr.nodesVisited; amNodes+=amr.nodesVisited; aeNodes+=aer.nodesVisited; valid++;
+                }
+            }
+            if (valid > 0) System.out.printf("%d,%d,%d,%d%n", size, dNodes/valid, amNodes/valid, aeNodes/valid);
+        }
+
+
+        System.out.println("\n=== MAZE GRIDS: Nodes Visited ===");
+        System.out.println("Size,Dijkstra,AStar_Manhattan,AStar_Euclidean");
+        int[] mazeSizes = {11, 21, 31, 51, 75, 101};
+        for (int size : mazeSizes) {
+            long dNodes = 0, amNodes = 0, aeNodes = 0;
+            int valid = 0;
+            for (int seed = 0; seed < TRIALS; seed++) {
+                Grid g = new Grid(size, size);
+                Node s = g.get(0,0), e = g.get(size-1,size-1);
+                g.generateMaze(s, e, seed);
+                g.reset(); PathResult dr  = Dijkstra.search(g, s, e, false);
+                g.reset(); PathResult amr = AStar.search(g, s, e, AStar.Heuristic.MANHATTAN, false);
+                g.reset(); PathResult aer = AStar.search(g, s, e, AStar.Heuristic.EUCLIDEAN, false);
+                if (dr.foundPath() && amr.foundPath() && aer.foundPath()) {
+                    dNodes+=dr.nodesVisited; amNodes+=amr.nodesVisited; aeNodes+=aer.nodesVisited; valid++;
+                }
+            }
+            if (valid > 0) System.out.printf("%d,%d,%d,%d%n", size, dNodes/valid, amNodes/valid, aeNodes/valid);
+        }
+
+
+        System.out.println("\n=== EXECUTION TIME (ms) | 4-DIR | OPEN GRID ===");
+        System.out.println("Size,Dijkstra,AStar_Manhattan,AStar_Euclidean");
+        for (int size : SIZES) {
+            long dT = 0, amT = 0, aeT = 0;
+            int valid = 0;
+            for (int seed = 0; seed < TRIALS; seed++) {
+                Grid g = makeRandom(size, 0.0, seed);
+                Node s = g.get(0,0), e = g.get(size-1,size-1);
+                g.reset(); PathResult dr  = Dijkstra.search(g, s, e, false);
+                g.reset(); PathResult amr = AStar.search(g, s, e, AStar.Heuristic.MANHATTAN, false);
+                g.reset(); PathResult aer = AStar.search(g, s, e, AStar.Heuristic.EUCLIDEAN, false);
+                if (dr.foundPath() && amr.foundPath() && aer.foundPath()) {
+                    dT+=dr.timeNanos; amT+=amr.timeNanos; aeT+=aer.timeNanos; valid++;
+                }
+            }
+            if (valid > 0) System.out.printf("%d,%.4f,%.4f,%.4f%n", size,
+                    (dT/valid)/1e6, (amT/valid)/1e6, (aeT/valid)/1e6);
+        }
+    }
+
+    private static Grid makeRandom(int size, double density, int seed) {
+        Grid g = new Grid(size, size);
+        Node s = g.get(0,0), e = g.get(size-1,size-1);
+        g.randomizeWalls(density, s, e, seed);
+        return g;
     }
 }
